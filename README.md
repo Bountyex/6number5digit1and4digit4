@@ -1,2 +1,4 @@
-# 6number5digit1and4digit4
-6number5digit1and4digit4
+mockery-docs
+============
+
+Document for the PHP Mockery framework on readthedocs.org
