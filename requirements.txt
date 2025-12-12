@@ -1,11 +1,3 @@
-
-
-## 📌 FILE 3 — `requirements.txt`
-
-```
 streamlit
 pandas
 openpyxl
-```
-
----
