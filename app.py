@@ -3,9 +3,9 @@
 This canvas contains a ready-to-upload GitHub project for a Streamlit app that:
 
 * Allows the user to upload an Excel file (Column A: tickets like `1,2,3,4,5,6`).
-* Processes 6-number tickets (numbers 1–25).
+* Processes 6-number tickets (numbers 1-25).
 * Brute-force searches all 177,100 possible 6-number combinations to find the one(s) with the lowest total payout using your payout rules.
-* Applies tie-breaking preferences: prefer combos with exactly one 5-match and 4–5 four-matches.
+* Applies tie-breaking preferences: prefer combos with exactly one 5-match and 4-5 four-matches.
 * Shows the best 10 combinations and lets the user download results as CSV.
 
 ---
@@ -28,7 +28,7 @@ from utils import (validate_and_parse_tickets, evaluate_combo_payouts,
 
 st.set_page_config(page_title="Lottery Optimizer", layout="wide")
 
-st.title("🎯 Lottery Optimizer — Find Lowest Payout 6-number Combo (1–25)")
+st.title("🎯 Lottery Optimizer — Find Lowest Payout 6-number Combo (1-25)")
 st.markdown(
     """
 Upload an Excel file where **Column A** contains tickets (6 unique numbers, comma-separated).
@@ -40,7 +40,7 @@ The app will evaluate all 177,100 possible 6-number combinations (numbers 1..25)
 - 5 numbers matched → 1850
 - 6 numbers matched → 50000
 
-Preferences: the app prefers combinations with exactly one 5-match and 4–5 four-matches when payouts tie.
+Preferences: the app prefers combinations with exactly one 5-match and 4-5 four-matches when payouts tie.
 """
 )
 
@@ -196,7 +196,7 @@ def evaluate_combo_payouts(combo, tickets, current_best=math.inf):
 def tie_score(item):
     """Tie-breaker scoring: lower is better.
 
-    Prefers exactly one 5-match; prefers num4 near 4–5; fewer 6-matches and fewer 3-matches.
+    Prefers exactly one 5-match; prefers num4 near 4-5; fewer 6-matches and fewer 3-matches.
     """
     _, num3, num4, num5, num6, combo = item
     score = abs(num5 - 1) * 1_000_000
@@ -221,7 +221,7 @@ pandas
 ````markdown
 # Lottery Optimizer (Streamlit)
 
-This project is a Streamlit web app that finds a 6-number combination (1–25) that minimizes total payout against an uploaded set of tickets.
+This project is a Streamlit web app that finds a 6-number combination (1-25) that minimizes total payout against an uploaded set of tickets.
 
 ## Project structure
 
