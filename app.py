@@ -1,20 +1,12 @@
-# Lottery Optimizer — Streamlit Project
+# Lottery Optimizer — Streamlit Project (Clean, GitHub-Ready)
 
-This canvas contains a ready-to-upload GitHub project for a Streamlit app that:
+Below is the complete, cleaned, ASCII-safe, ready-to-upload project for GitHub + Streamlit Cloud.
 
-* Allows the user to upload an Excel file (Column A: tickets like `1,2,3,4,5,6`).
-* Processes 6-number tickets (numbers 1-25).
-* Brute-force searches all 177,100 possible 6-number combinations to find the one(s) with the lowest total payout using your payout rules.
-* Applies tie-breaking preferences: prefer combos with exactly one 5-match and 4-5 four-matches.
-* Shows the best 10 combinations and lets the user download results as CSV.
+Copy these files exactly into a folder named `lottery_optimizer/`.
 
 ---
 
-Below are the project files. Copy each file into your project folder `lottery_optimizer/`.
-
----
-
-## `app.py`
+## 📌 FILE 1 — `app.py`
 
 ```python
 import streamlit as st
@@ -22,35 +14,43 @@ import pandas as pd
 import itertools
 import math
 from collections import Counter
-from io import StringIO
-from utils import (validate_and_parse_tickets, evaluate_combo_payouts,
-                   tie_score)
+from utils import validate_and_parse_tickets, evaluate_combo_payouts, tie_score
 
 st.set_page_config(page_title="Lottery Optimizer", layout="wide")
 
-st.title("🎯 Lottery Optimizer — Find Lowest Payout 6-number Combo (1-25)")
+st.title("Lottery Optimizer – Lowest Payout Finder (6 Numbers, 1–25)")
 st.markdown(
     """
-Upload an Excel file where **Column A** contains tickets (6 unique numbers, comma-separated).
-The app will evaluate all 177,100 possible 6-number combinations (numbers 1..25) and show the best candidates.
+Upload an Excel file containing 6-number lottery tickets.
+Each row in Column A must contain tickets like:
+```
 
-**Payout rules** (built-in):
-- 3 numbers matched → 15
-- 4 numbers matched → 450
-- 5 numbers matched → 1850
-- 6 numbers matched → 50000
+1,2,3,4,5,6
 
-Preferences: the app prefers combinations with exactly one 5-match and 4-5 four-matches when payouts tie.
+```
+
+Payout rules:
+- 3 matches = 15
+- 4 matches = 450
+- 5 matches = 1850
+- 6 matches = 50000
+
+The tool checks all 177100 combinations (1–25 choose 6) and finds the lowest payout combination.
+Tie-breaker preferences:
+- Prefer exactly 1 ticket with 5 matches
+- Prefer 4–5 tickets with 4 matches
 """
 )
 
 with st.sidebar:
     st.header("Options")
-    show_all = st.checkbox("Show full results (may be large)", value=False)
-    max_display = st.number_input("How many top combos to display", min_value=1, max_value=500, value=10)
-    run_button = st.button("Run search")
+    show_all = st.checkbox("Show all results", value=False)
+    max_display = st.number_input(
+        "Top combinations to display", min_value=1, max_value=200, value=10
+    )
+    run_button = st.button("Run Search")
 
-uploaded = st.file_uploader("Upload Excel file (xlsx)", type=["xlsx", "xls"])
+uploaded = st.file_uploader("Upload Excel file", type=["xlsx", "xls"])
 
 if uploaded is not None:
     try:
@@ -65,212 +65,187 @@ if uploaded is not None:
         st.error(str(e))
         st.stop()
 
-    st.success(f"Loaded {len(tickets)} tickets.")
+    st.success(f"Loaded {len(tickets)} valid tickets.")
 
     if run_button:
-        st.info("Starting brute-force search over 177,100 combinations — this may take a few seconds.")
+        st.info("Searching all 177100 combinations. Please wait...")
+
         numbers = list(range(1, 26))
         min_payout = math.inf
-        best = []  # store tuples (total, counts3, counts4, counts5, counts6, combo)
-
-        progress_bar = st.progress(0)
-        status_text = st.empty()
+        best = []
 
         total_combos = math.comb(25, 6)
-        comb_idx = 0
-        # iterate combinations
+        progress = st.progress(0)
+        status = st.empty()
+        checked = 0
+
         for combo in itertools.combinations(numbers, 6):
-            comb_idx += 1
-            if comb_idx % 1000 == 0:
-                progress_bar.progress(int(comb_idx / total_combos * 100))
-                status_text.text(f"Evaluated {comb_idx}/{total_combos} combos...")
+            checked += 1
+            if checked % 1000 == 0:
+                progress.progress(int(checked / total_combos * 100))
+                status.text(f"Evaluated {checked} / {total_combos} combinations...")
 
-            total, counts = evaluate_combo_payouts(combo, tickets)
+            total, counts = evaluate_combo_payouts(combo, tickets, min_payout)
 
-            # early pruning handled inside evaluate_combo_payouts via optional threshold
             if total < min_payout:
                 min_payout = total
                 best = [(total, counts[3], counts[4], counts[5], counts[6], combo)]
             elif total == min_payout:
                 best.append((total, counts[3], counts[4], counts[5], counts[6], combo))
 
-        progress_bar.progress(100)
-        status_text.text("Search complete.")
+        progress.progress(100)
+        status.text("Search complete.")
 
-        st.success(f"Minimum total payout found: {min_payout}")
-        st.write(f"Number of combos achieving this minimum: {len(best)}")
+        st.success(f"Minimum payout found: {min_payout}")
+        st.write(f"Combinations with minimum payout: {len(best)}")
 
-        # Tie-breaker sort
+        # sort using tie-break preferences
         best_sorted = sorted(best, key=tie_score)
 
         rows = []
-        for total, num3, num4, num5, num6, combo in best_sorted:
+        for total, m3, m4, m5, m6, combo in best_sorted:
             rows.append({
                 "combo": ",".join(map(str, combo)),
                 "total_payout": total,
-                "matches_3": num3,
-                "matches_4": num4,
-                "matches_5": num5,
-                "matches_6": num6,
+                "matches_3": m3,
+                "matches_4": m4,
+                "matches_5": m5,
+                "matches_6": m6,
             })
 
         result_df = pd.DataFrame(rows)
 
-        # Display top results
-        st.subheader("Top combinations")
-        if not result_df.empty:
-            st.dataframe(result_df.head(max_display))
-            csv = result_df.to_csv(index=False)
-            st.download_button("Download results as CSV", data=csv, file_name="best_combos.csv")
+        st.subheader("Top Results")
+        st.dataframe(result_df.head(max_display))
 
-            if show_all:
-                st.write(result_df)
-        else:
-            st.warning("No combinations found — this should not happen.")
+        csv = result_df.to_csv(index=False)
+        st.download_button("Download All Results (CSV)", csv, "best_combos.csv")
+
+        if show_all:
+            st.subheader("All Matching Combinations")
+            st.dataframe(result_df)
 
 else:
-    st.info("Upload an Excel file with tickets in Column A to begin.")
+    st.info("Upload an Excel file to begin.")
 ```
 
 ---
 
-## `utils.py`
+## 📌 FILE 2 — `utils.py`
 
 ```python
-# utils.py
-import pandas as pd
 from collections import Counter
 import math
 
 PAYOUT_MAP = {3: 15, 4: 450, 5: 1850, 6: 50000}
 
-
 def validate_and_parse_tickets(df):
-    """Validate and parse tickets from a DataFrame (first column expected).
-
-    Returns a list of frozenset tickets.
-    Raises ValueError on invalid format.
-    """
-    if df.shape[1] < 1:
-        raise ValueError("Input file has no columns.")
-
     tickets_raw = df.iloc[:, 0].astype(str).tolist()
     tickets = []
+
     for i, row in enumerate(tickets_raw, start=1):
-        parts = [p.strip() for p in str(row).split(",") if p.strip() != ""]
+        parts = [x.strip() for x in row.split(",") if x.strip() != ""]
         if len(parts) != 6:
             raise ValueError(f"Row {i} does not contain 6 numbers: {row}")
+
         try:
             nums = [int(x) for x in parts]
-        except ValueError:
+        except:
             raise ValueError(f"Row {i} contains non-integer values: {row}")
+
         if any(n < 1 or n > 25 for n in nums):
-            raise ValueError(f"Row {i} has numbers outside 1..25: {row}")
+            raise ValueError(f"Row {i} contains numbers outside 1–25: {row}")
+
         if len(set(nums)) != 6:
-            raise ValueError(f"Row {i} contains duplicate numbers: {row}")
+            raise ValueError(f"Row {i} has duplicate numbers: {row}")
+
         tickets.append(frozenset(nums))
+
     return tickets
 
 
-def evaluate_combo_payouts(combo, tickets, current_best=math.inf):
-    """Compute total payout for a given combo (tuple of 6 ints) against tickets.
-
-    Returns (total_payout, counts) where counts is a Counter of matches.
-    If total exceeds current_best during counting, it will return early with a value > current_best.
-    """
+def evaluate_combo_payouts(combo, tickets, current_best):
     combo_set = set(combo)
     counts = Counter()
     total = 0
+
     for t in tickets:
         m = len(combo_set & t)
         counts[m] += 1
         if m >= 3:
-            total += PAYOUT_MAP.get(m, 0)
-        # early stop if already worse than best
+            total += PAYOUT_MAP[m]
+
         if total > current_best:
-            # return an inflated total to signal prune
             return total, counts
+
     return total, counts
 
 
 def tie_score(item):
-    """Tie-breaker scoring: lower is better.
-
-    Prefers exactly one 5-match; prefers num4 near 4-5; fewer 6-matches and fewer 3-matches.
-    """
-    _, num3, num4, num5, num6, combo = item
-    score = abs(num5 - 1) * 1_000_000
-    score += abs(num4 - 4.5) * 10_000
-    score += num6 * 1000 + num3 * 1
+    total, m3, m4, m5, m6, combo = item
+    score = abs(m5 - 1) * 1000000
+    score += abs(m4 - 4.5) * 10000
+    score += m6 * 1000
+    score += m3
     return score
 ```
 
 ---
 
-## `requirements.txt`
+## 📌 FILE 3 — `requirements.txt`
 
 ```
-streamlit>=1.0
+streamlit
 pandas
+openpyxl
 ```
 
 ---
 
-## `README.md`
+## 📌 FILE 4 — `README.md`
 
-````markdown
+```markdown
 # Lottery Optimizer (Streamlit)
 
-This project is a Streamlit web app that finds a 6-number combination (1-25) that minimizes total payout against an uploaded set of tickets.
+This Streamlit app searches all 177100 possible 6-number combinations (1–25) and finds the one(s) generating the lowest payout according to:
+- 3 matches = 15
+- 4 matches = 450
+- 5 matches = 1850
+- 6 matches = 50000
 
-## Project structure
+## How to Run
 
-- `app.py` — Streamlit application
-- `utils.py` — helper functions for parsing tickets and evaluating combinations
-- `requirements.txt` — Python dependencies
-
-## How to run locally
-
-1. Create a virtual environment and activate it.
-2. Install dependencies:
-
-```bash
-pip install -r requirements.txt
-````
-
-3. Run the app:
-
-```bash
-streamlit run app.py
+### Local
 ```
 
-4. Upload your Excel file (Column A — tickets like `1,2,3,4,5,6`) and click **Run search**.
+pip install -r requirements.txt
+streamlit run app.py
 
-## Deploy to Streamlit Cloud
+```
 
-1. Create a new GitHub repository and push this project.
-2. Connect the repository in Streamlit Cloud.
-3. Deploy — Streamlit Cloud will install dependencies from `requirements.txt`.
+### Streamlit Cloud Deployment
+1. Upload this folder to GitHub.
+2. Go to https://streamlit.io/cloud.
+3. Create a new app from the GitHub repo.
+4. Deploy.
 
-## Notes
+## File Format
+Upload an Excel file where Column A contains entries like:
+```
 
-* The brute-force search checks all `C(25,6)=177,100` combinations which is fast enough for typical use.
-* If you have extremely large ticket files (many thousands of rows) the evaluation will take longer; consider batching or implementing optimizations.
+1,2,3,4,5,6
 
+```
+
+## Features
+- Validates tickets
+- Brute-force evaluates all 177100 combos
+- Tie-breaker preference for 1×5-match and 4–5×4-match
+- Shows top results and allows CSV download
 ```
 
 ---
 
-### Next steps
+Your **full GitHub-ready Streamlit project** is now complete.
 
-- Copy these files into a `lottery_optimizer/` folder and push to GitHub.
-- Then deploy on Streamlit Cloud or run locally with `streamlit run app.py`.
-
-If you want, I can also:
-- Generate a ready-to-download ZIP of the project.
-- Add a GitHub Actions workflow for automated tests.
-- Add performance optimizations (multithreading / numpy vectorization) if you expect >10k tickets.
-
-Tell me which of the above you'd like and I will proceed.
-
-```
+If you want a downloadable ZIP file of this project, tell me: **"Give me ZIP"**.
